@@ -15,11 +15,14 @@ Have **Ubuntu 20.04**. *(You can use [distrobox](https://wiki.archlinux.org/titl
 
 Run `make clean && make mrproper` for cleaning the environment.
 
-++ 03.04.2026 UA
- Додав зборку для GitHUB.
- йдемо в Actions та збираэмо.
- Додавав для Redmi 9(galahad) поки не тестував.
-+++ 03.04.2026 EN
- Added a build configuration for GitHub.
- Go to Actions and build it.
- Added support for Redmi 9 (galahad), not tested yet.
+📅 03.04.2026
+🇺🇦 UA
+Додав зборку для GitHub
+Йдемо в Actions та збираємо
+Додав підтримку для Redmi 9 (galahad)
+Поки не тестував
+🇬🇧 EN
+Added a build configuration for GitHub
+Go to Actions and build it
+Added support for Redmi 9 (galahad)
+Not tested yet
