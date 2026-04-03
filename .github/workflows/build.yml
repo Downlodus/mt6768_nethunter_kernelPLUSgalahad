@@ -58,7 +58,7 @@ jobs:
           make dtbs -j$(nproc --all) O=out ARCH=arm64 CC=clang NM=llvm-nm LD=ld.lld AR=llvm-ar AS=llvm-as OBJCOPY=llvm-objcopy DEFCONFIG=$DEFCONFIG CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=$GCC_64_DIR/bin/aarch64-linux-android- CROSS_COMPILE_ARM32=$GCC_32_DIR/bin/arm-linux-androideabi-
           
           echo "Creating dtbo.img..."
-          python2 ./libufdt/utils/src/mkdtboimg.py create out/arch/arm64/boot/dtbo.img out/arch/arm64/boot/dts/mediatek/*.dtbo
+          python3 ./libufdt/utils/src/mkdtboimg.py create out/arch/arm64/boot/dtbo.img out/arch/arm64/boot/dts/mediatek/*.dtbo
 
       - name: Package with AnyKernel3
         run: |
