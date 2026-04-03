@@ -28,7 +28,7 @@ jobs:
           path: kernel
           fetch-depth: 1
 
-      - name: Download Toolchains (Clang & GCC 4.9)
+      - name: Download Toolchains & libufdt
         run: |
           mkdir -p tc
           echo "Cloning Prelude Clang..."
@@ -37,6 +37,8 @@ jobs:
           git clone --depth=1 -b lineage-19.1 https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git tc/aarch64-linux-android-4.9
           echo "Cloning GCC 32..."
           git clone --depth=1 -b lineage-19.1 https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9.git tc/arm-linux-androideabi-4.9
+          echo "Cloning libufdt for mkdtboimg.py..."
+          git clone https://android.googlesource.com/platform/system/libufdt kernel/libufdt
 
       - name: Build Kernel
         run: |
