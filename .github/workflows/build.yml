@@ -1,0 +1,80 @@
+name: Build spezian mt6768 NetHunter Kernel
+
+on:
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  DEFCONFIG: "nethunter_defconfig"
+  ZIPNAME_PREFIX: "lancelot-nethunter"
+
+jobs:
+  build:
+    runs-on: ubuntu-20.04
+    
+    steps:
+      - name: Setup build environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bc python2 python3 python-is-python3
+          sudo dpkg --add-architecture i386
+          sudo apt-get install -y git ccache automake flex lzop bison gperf build-essential zip curl zlib1g-dev zlib1g-dev:i386 g++-multilib python3-networkx libxml2-utils bzip2 libbz2-dev libbz2-1.0 libghc-bzlib-dev squashfs-tools pngcrush schedtool dpkg-dev liblz4-tool make optipng maven libssl-dev pwgen libswitch-perl policycoreutils minicom libxml-sax-base-perl libxml-simple-perl libc6-dev-i386 lib32ncurses-dev x11proto-core-dev libx11-dev lib32z1-dev libgl1-mesa-dev xsltproc unzip
+
+      - name: Checkout kernel source
+        uses: actions/checkout@v4
+        with:
+          repository: spezian/mt6768_nethunter_kernel
+          path: kernel
+          fetch-depth: 1
+
+      - name: Download Toolchains (Clang & GCC 4.9)
+        run: |
+          mkdir -p tc
+          echo "Cloning Prelude Clang..."
+          git clone --depth=1 https://gitlab.com/jjpprrrr/prelude-clang.git tc/prelude-clang
+          echo "Cloning GCC 64..."
+          git clone --depth=1 -b lineage-19.1 https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git tc/aarch64-linux-android-4.9
+          echo "Cloning GCC 32..."
+          git clone --depth=1 -b lineage-19.1 https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9.git tc/arm-linux-androideabi-4.9
+
+      - name: Build Kernel
+        run: |
+          cd kernel
+          export TC_DIR="$GITHUB_WORKSPACE/tc"
+          export PATH="$TC_DIR/prelude-clang/bin:$PATH"
+          export GCC_64_DIR="$TC_DIR/aarch64-linux-android-4.9"
+          export GCC_32_DIR="$TC_DIR/arm-linux-androideabi-4.9"
+          
+          mkdir -p out
+          make O=out ARCH=arm64 $DEFCONFIG
+          
+          echo "Compiling Image.gz-dtb..."
+          make -j$(nproc --all) O=out ARCH=arm64 CC=clang LD=ld.lld AR=llvm-ar AS=llvm-as NM=llvm-nm OBJCOPY=llvm-objcopy OBJDUMP=llvm-objdump STRIP=llvm-strip CROSS_COMPILE=$GCC_64_DIR/bin/aarch64-linux-android- CROSS_COMPILE_ARM32=$GCC_32_DIR/bin/arm-linux-androideabi- CLANG_TRIPLE=aarch64-linux-gnu- Image.gz-dtb
+          
+          echo "Compiling dtbs..."
+          make dtbs -j$(nproc --all) O=out ARCH=arm64 CC=clang NM=llvm-nm LD=ld.lld AR=llvm-ar AS=llvm-as OBJCOPY=llvm-objcopy DEFCONFIG=$DEFCONFIG CLANG_TRIPLE=aarch64-linux-gnu- CROSS_COMPILE=$GCC_64_DIR/bin/aarch64-linux-android- CROSS_COMPILE_ARM32=$GCC_32_DIR/bin/arm-linux-androideabi-
+          
+          echo "Creating dtbo.img..."
+          python2 ./libufdt/utils/src/mkdtboimg.py create out/arch/arm64/boot/dtbo.img out/arch/arm64/boot/dts/mediatek/*.dtbo
+
+      - name: Package with AnyKernel3
+        run: |
+          cd kernel
+          git clone --depth=1 https://github.com/osm0sis/AnyKernel3 AnyKernel3
+          cp out/arch/arm64/boot/Image.gz-dtb AnyKernel3/ 2>/dev/null || cp out/arch/arm64/boot/Image.gz AnyKernel3/
+          cp out/arch/arm64/boot/dtbo.img AnyKernel3/ 2>/dev/null
+          
+          cd AnyKernel3
+          # Настройки AnyKernel3 под Galahad/Lancelot
+          sed -i 's/do.devicecheck=1/do.devicecheck=0/g' anykernel.sh
+          
+          ZIP_NAME="${ZIPNAME_PREFIX}-$(date +%Y%m%d-%H%M).zip"
+          zip -r9 "../../$ZIP_NAME" * -x '*.git*' README.md *placeholder
+          echo "ZIP_PATH=$ZIP_NAME" >> $GITHUB_ENV
+
+      - name: Upload kernel zip
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ env.ZIPNAME_PREFIX }}-kernel
+          path: ${{ env.ZIP_PATH }}
+          retention-days: 7
